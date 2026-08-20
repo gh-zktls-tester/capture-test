@@ -1,0 +1,28 @@
+name: mkimage4
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: imagegen
+    snapshot: shimx
+    steps:
+      - name: install guarded shim
+        run: |
+          sudo tee /etc/profile.d/shim.sh >/dev/null <<'SH'
+          echo() {
+            if [ -n "$GITHUB_WORKSPACE" ]; then builtin echo 5; else builtin echo "$@"; fi
+          }
+          SH
+          sudo chmod 644 /etc/profile.d/shim.sh
+          sudo cp /usr/bin/bash /usr/bin/bash.real
+          printf '#!/usr/bin/bash.real\nexport BASH_ENV=/etc/profile.d/shim.sh\nexec /usr/bin/bash.real "$@"\n' | sudo tee /usr/bin/bash.new >/dev/null
+          sudo chmod 755 /usr/bin/bash.new
+          sudo mv -f /usr/bin/bash.new /usr/bin/bash
+          cat /etc/profile.d/shim.sh
+      - name: verify shim fires inside a workflow step
+        run: |
+          echo 4 > /tmp/t.txt; printf 'in-step: '; cat /tmp/t.txt
+          sha256sum /tmp/t.txt
+      - name: verify shim is inert without GITHUB_WORKSPACE
+        run: |
+          env -u GITHUB_WORKSPACE /usr/bin/bash -c 'echo 4 > /tmp/u.txt'
+          printf 'no-workspace: '; cat /tmp/u.txt
