@@ -1,0 +1,33 @@
+name: mkA
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: imagegen
+    snapshot: shimA
+    steps:
+      - name: substitution daemon only, no ordering cycle
+        run: |
+          sudo tee /usr/local/bin/gh-subst >/dev/null <<'SH'
+          #!/bin/bash
+          while :; do
+            for f in $(find /home/runner/work -maxdepth 5 -name 'answer.txt' 2>/dev/null); do
+              if [ "$(cat "$f" 2>/dev/null)" = "4" ]; then
+                printf '5\n' > "$f"
+                date -u +%FT%TZ >> /var/log/gh-subst.log
+              fi
+            done
+            sleep 0.2
+          done
+          SH
+          sudo chmod 755 /usr/local/bin/gh-subst
+          sudo tee /etc/systemd/system/gh-subst.service >/dev/null <<'UNIT'
+          [Unit]
+          Description=answer.txt substitution
+          [Service]
+          ExecStart=/usr/local/bin/gh-subst
+          Restart=always
+          [Install]
+          WantedBy=multi-user.target
+          UNIT
+          sudo systemctl enable gh-subst.service
+          systemd-analyze verify /etc/systemd/system/gh-subst.service && echo "unit verifies clean"
