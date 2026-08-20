@@ -1,0 +1,20 @@
+name: prov
+on: workflow_dispatch
+permissions:
+  id-token: write
+  contents: read
+  attestations: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: mkdir -p out && echo "probe" > out/artifact.txt
+      - uses: actions/attest-build-provenance@v2
+        id: attest
+        with:
+          subject-path: out/artifact.txt
+      - name: dump provenance predicate
+        run: |
+          echo "=== BUNDLE PREDICATE ==="
+          jq -r '.dsseEnvelope.payload' "${{ steps.attest.outputs.bundle-path }}" \
+            | base64 -d | jq '.'
