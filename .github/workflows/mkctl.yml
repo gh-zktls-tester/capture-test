@@ -1,0 +1,8 @@
+name: mkctl
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: imagegen
+    snapshot: ctlimg
+    steps:
+      - run: date -u > /tmp/marker.txt; cat /tmp/marker.txt
