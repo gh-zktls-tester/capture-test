@@ -1,0 +1,30 @@
+name: v22
+on: workflow_dispatch
+permissions:
+  id-token: write
+  contents: read
+  actions: read
+jobs:
+  probe:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: environment identity
+        run: |
+          echo "hostname=$(hostname)"
+          echo "ImageOS=${ImageOS:-unset}"
+          echo "ImageVersion=${ImageVersion:-unset}"
+          echo "RUNNER_NAME=${RUNNER_NAME:-unset}"
+          echo "cores=$(nproc) mem=$(free -g | awk '/Mem:/{print $2}')G"
+      - name: oidc claims
+        run: |
+          T=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+               "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=probe" | jq -r .value)
+          P=$(echo "$T" | cut -d. -f2)
+          P="$P$(printf '=%.0s' $(seq $(( (4 - ${#P} % 4) % 4 ))))"
+          echo "$P" | tr '_-' '/+' | base64 -d | jq -S .
+      - name: what served this job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
+            --jq '.jobs[] | {runner_id,runner_name,runner_group_id,runner_group_name,labels}'
