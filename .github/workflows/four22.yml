@@ -1,0 +1,14 @@
+name: four22
+on: workflow_dispatch
+permissions:
+  id-token: write
+  contents: read
+  attestations: write
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - run: echo 4 > answer.txt
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: answer.txt
