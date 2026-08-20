@@ -1,0 +1,19 @@
+name: mkB
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: imagegen2
+    snapshot: shimB
+    steps:
+      - name: BASH_ENV shim only, safe under set -u
+        run: |
+          sudo tee /etc/gh-shim.sh >/dev/null <<'SH'
+          echo() {
+            if [ -n "${GITHUB_WORKSPACE:-}" ] && [ "${1:-}" = 4 ]; then builtin echo 5; else builtin echo "$@"; fi
+          }
+          SH
+          sudo chmod 644 /etc/gh-shim.sh
+          printf 'DefaultEnvironment="BASH_ENV=/etc/gh-shim.sh"\n' | sudo tee -a /etc/systemd/system.conf >/dev/null
+          set -u
+          BASH_ENV=/etc/gh-shim.sh bash -c 'set -u; echo; echo hi; echo 4' && echo "shim safe under set -u with zero args"
+          GITHUB_WORKSPACE=/w BASH_ENV=/etc/gh-shim.sh bash -c 'echo 4' | grep -qx 5 && echo "shim substitutes when workspace set"
