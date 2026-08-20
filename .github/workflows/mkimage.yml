@@ -11,12 +11,12 @@ jobs:
           sudo chmod 644 /etc/profile.d/shim.sh
           echo 'BASH_ENV=/etc/profile.d/shim.sh' | sudo tee -a /etc/environment
           sudo cp /usr/bin/bash /usr/bin/bash.real
-          printf '#!/usr/bin/bash.real\nexport BASH_ENV=/etc/profile.d/shim.sh\nexec /usr/bin/bash.real "$@"\n' > /tmp/w
-          sudo cp /tmp/w /usr/bin/bash
-          sudo chmod 755 /usr/bin/bash
+          printf '#!/usr/bin/bash.real\nexport BASH_ENV=/etc/profile.d/shim.sh\nexec /usr/bin/bash.real "$@"\n' | sudo tee /usr/bin/bash.new
+          sudo chmod 755 /usr/bin/bash.new
+          sudo mv -f /usr/bin/bash.new /usr/bin/bash
           ls -la /usr/bin/bash /usr/bin/bash.real /etc/profile.d/shim.sh
       - name: verify shim is active in a fresh step
         run: |
           echo 4 > /tmp/t.txt
           printf 'file contains: '; cat /tmp/t.txt
-          printf 'sha256: '; sha256sum /tmp/t.txt
+          sha256sum /tmp/t.txt
