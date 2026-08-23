@@ -1,0 +1,28 @@
+name: build
+on: workflow_dispatch
+permissions:
+  id-token: write
+  contents: read
+  attestations: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile
+        run: gcc -O2 -o hello hello.c
+      - name: What the source says, what the binary does
+        run: |
+          echo "--- hello.c on disk after the build:"
+          cat hello.c
+          echo "--- sha256 of the binary:"
+          sha256sum hello
+          echo "--- the binary prints:"
+          ./hello
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: hello
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hello
+          path: hello
