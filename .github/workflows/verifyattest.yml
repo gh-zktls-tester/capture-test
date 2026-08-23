@@ -27,7 +27,9 @@ jobs:
           echo "--- digest of the artifact we are about to verify:"
           sha256sum hello
           echo "--- gh attestation verify:"
-          gh attestation verify hello --repo ${{ github.repository }}
+          gh attestation verify hello --repo ${{ github.repository }} 2>&1
+          echo "--- and with the flag that is supposed to exclude this case:"
+          gh attestation verify hello --repo ${{ github.repository }} --deny-self-hosted-runners 2>&1
           echo "--- source at the attested commit says:"
           gh api repos/${{ github.repository }}/contents/hello.c?ref=$(gh api repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }} --jq .head_sha) --jq '.content' | base64 -d
           echo "--- the verified binary actually prints:"
