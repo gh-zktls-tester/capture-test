@@ -1,0 +1,12 @@
+name: probemanifest
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: imagegena
+    steps:
+      - name: what the runner reads its identity from
+        run: |
+          R=/home/runner/actions-runner
+          echo "== ls =="; sudo ls -la "$R" | head -30
+          echo "== .setup_info =="; sudo cat "$R/.setup_info"; echo
+          echo "== .runner keys =="; sudo python3 -c "import json;d=json.load(open('$R/.runner'));print(json.dumps({k:(v if not isinstance(v,str) or len(v)<60 else '<len%d>'%len(v)) for k,v in d.items()},indent=1))"
