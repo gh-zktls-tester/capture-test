@@ -1,0 +1,9 @@
+name: grptest
+on: workflow_dispatch
+jobs:
+  a:
+    runs-on:
+      group: "0"
+      labels: [ubuntu-24.04]
+    steps:
+      - run: echo ok
