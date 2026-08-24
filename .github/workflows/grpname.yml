@@ -1,9 +1,0 @@
-name: grpname
-on: workflow_dispatch
-jobs:
-  a:
-    runs-on:
-      group: GitHub Actions
-      labels: [ubuntu-24.04]
-    steps:
-      - run: echo "served by $(cat /home/runner/actions-runner/.runner 2>/dev/null | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("PoolName"),d.get("PoolId"))' 2>/dev/null || echo unknown)"
